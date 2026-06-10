@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Le Défi Sardoche — Recopier le Dictionnaire</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0d0d0d;
+    --surface: #141414;
+    --border: #252525;
+    --accent: #e8ff3a;
+    --accent-dim: rgba(232,255,58,0.12);
+    --text: #f0f0f0;
+    --muted: #555;
+    --success: #3affa0;
+    --error: #ff4444;
+    --letter-done: #2a2a2a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .stats-bar {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .stat-item { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+  .stat-val { color: var(--text); font-size: 16px; font-weight: 700; }
+  .stat-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+
+  /* ── Progress bar ── */
+  .progress-wrap {
+    padding: 0 24px;
+    padding-top: 16px;
+  }
+
+  .progress-track {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+    min-width: 2px;
+  }
+
+  .progress-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    margin-top: 6px;
+  }
+
+  .pct { color: var(--accent); font-weight: 700; font-size: 13px; }
+
+  /* ── Letter tabs ── */
+  .alpha-scroll {
+    padding: 14px 24px 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .alpha-scroll::-webkit-scrollbar { display: none; }
+
+  .alpha-tabs {
+    display: flex;
+    gap: 4px;
+    min-width: max-content;
+  }
+
+  .alpha-tab {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 5px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: default;
+    transition: all 0.15s;
+    letter-spacing: 0.05em;
+    user-select: none;
+  }
+
+  .alpha-tab.done {
+    background: var(--letter-done);
+    border-color: var(--letter-done);
+    color: #333;
+  }
+
+  .alpha-tab.current {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ── Main arena ── */
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 24px;
+    gap: 28px;
+  }
+
+  .word-display {
+    text-align: center;
+  }
+
+  .word-number {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .current-word {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(28px, 6vw, 52px);
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.05em;
+    min-height: 1.2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .word-char { transition: color 0.05s; }
+  .word-char.correct { color: var(--success); }
+  .word-char.wrong { color: var(--error); }
+  .word-char.pending { color: var(--muted); }
+
+  /* ── Input zone ── */
+  .input-zone {
+    width: 100%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .input-wrap {
+    width: 100%;
+    position: relative;
+  }
+
+  #wordInput {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    padding: 16px 20px;
+    outline: none;
+    text-align: center;
+    letter-spacing: 0.08em;
+    transition: border-color 0.15s, background 0.15s;
+    caret-color: var(--accent);
+  }
+
+  #wordInput:focus {
+    border-color: var(--accent);
+    background: #161616;
+  }
+
+  #wordInput.shake {
+    animation: shake 0.3s ease;
+    border-color: var(--error);
+  }
+
+  #wordInput.correct-flash {
+    border-color: var(--success);
+  }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+
+  .hint-text {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.05em;
+    height: 16px;
+    transition: color 0.2s;
+  }
+
+  .hint-text.error { color: var(--error); }
+  .hint-text.success { color: var(--success); }
+
+  /* ── Controls ── */
+  .controls {
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn:hover { border-color: var(--text); color: var(--text); }
+
+  .btn-skip {
+    border-color: #3a3a3a;
+    color: #555;
+  }
+
+  .btn-skip:hover { border-color: #ff9900; color: #ff9900; }
+
+  /* ── Next word peek ── */
+  .next-peek {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: #2a2a2a;
+    letter-spacing: 0.08em;
+    text-align: center;
+    height: 18px;
+    transition: color 0.3s;
+  }
+
+  .next-peek.visible { color: #333; }
+
+  /* ── Loading screen ── */
+  #loadScreen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    z-index: 100;
+  }
+
+  .load-logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  .load-bar-track {
+    width: 200px;
+    height: 2px;
+    background: var(--border);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+
+  .load-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0;
+    animation: loading 1.5s ease-in-out infinite;
+  }
+
+  @keyframes loading {
+    0% { width: 0; margin-left: 0; }
+    50% { width: 60%; margin-left: 20%; }
+    100% { width: 0; margin-left: 100%; }
+  }
+
+  .load-text {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    padding: 10px 20px;
+    border-radius: 6px;
+    transition: transform 0.3s ease;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  #toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ── Milestone banner ── */
+  #milestone {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0;
+    background: var(--bg);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+    font-size: 24px;
+    font-weight: 700;
+    padding: 24px 40px;
+    border-radius: 12px;
+    text-align: center;
+    pointer-events: none;
+    transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    z-index: 50;
+    letter-spacing: 0.05em;
+  }
+
+  #milestone.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    header { padding: 14px 16px 12px; }
+    .stats-bar { gap: 16px; }
+    main { padding: 24px 16px; }
+    #wordInput { font-size: 18px; padding: 14px 16px; }
+    .progress-wrap { padding: 12px 16px 0; }
+    .alpha-scroll { padding: 12px 16px 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loadScreen">
+  <div class="load-logo">Défi Sardoche</div>
+  <div class="load-bar-track"><div class="load-bar-fill"></div></div>
+  <div class="load-text" id="loadText">Chargement du dictionnaire…</div>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="logo">📖 Défi Sardoche</div>
+  <div class="stats-bar">
+    <div class="stat-item">
+      <span class="stat-val" id="statDone">0</span>
+      <span class="stat-label">Validés</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-val" id="statSkipped">0</span>
+      <span class="stat-label">Passés</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-val" id="statRemaining">—</span>
+      <span class="stat-label">Restants</span>
+    </div>
+  </div>
+</header>
+
+<!-- Progress -->
+<div class="progress-wrap">
+  <div class="progress-track">
+    <div class="progress-fill" id="progressFill" style="width:0%"></div>
+  </div>
+  <div class="progress-labels">
+    <span>A</span>
+    <span class="pct" id="pctLabel">0.000%</span>
+    <span>Z</span>
+  </div>
+</div>
+
+<!-- Alpha tabs -->
+<div class="alpha-scroll">
+  <div class="alpha-tabs" id="alphaTabs"></div>
+</div>
+
+<!-- Main -->
+<main>
+  <div class="word-display">
+    <div class="word-number" id="wordNumber">Mot #1</div>
+    <div class="current-word" id="currentWord"></div>
+  </div>
+
+  <div class="input-zone">
+    <div class="input-wrap">
+      <input type="text" id="wordInput" placeholder="Tape le mot…" autocomplete="off"
+             autocorrect="off" autocapitalize="off" spellcheck="false">
+    </div>
+    <div class="hint-text" id="hintText"></div>
+    <div class="controls">
+      <button class="btn btn-skip" id="btnSkip" title="Passer ce mot (compté comme passé)">Passer →</button>
+      <button class="btn" id="btnReset">Reset</button>
+    </div>
+  </div>
+
+  <div class="next-peek" id="nextPeek"></div>
+</main>
+
+<div id="toast"></div>
+<div id="milestone"></div>
+
+<script src="words.js"></script>
+<script>
+(() => {
+  // ── State ──────────────────────────────────────────────────────────
+  const SAVE_KEY = 'sardoche_v3';
+  let state = { idx: 0, done: 0, skipped: 0 };
+
+  function loadState() {
+    try {
+      const s = localStorage.getItem(SAVE_KEY);
+      if (s) state = JSON.parse(s);
+    } catch {}
+  }
+
+  function saveState() {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  }
+
+  // ── DOM refs ────────────────────────────────────────────────────────
+  const loadScreen   = document.getElementById('loadScreen');
+  const loadText     = document.getElementById('loadText');
+  const wordInput    = document.getElementById('wordInput');
+  const currentWordEl= document.getElementById('currentWord');
+  const wordNumberEl = document.getElementById('wordNumber');
+  const progressFill = document.getElementById('progressFill');
+  const pctLabel     = document.getElementById('pctLabel');
+  const statDone     = document.getElementById('statDone');
+  const statSkipped  = document.getElementById('statSkipped');
+  const statRemaining= document.getElementById('statRemaining');
+  const hintText     = document.getElementById('hintText');
+  const alphaTabs    = document.getElementById('alphaTabs');
+  const nextPeek     = document.getElementById('nextPeek');
+  const toast        = document.getElementById('toast');
+  const milestone    = document.getElementById('milestone');
+  const btnSkip      = document.getElementById('btnSkip');
+  const btnReset     = document.getElementById('btnReset');
+
+  // ── Alpha tabs ──────────────────────────────────────────────────────
+  const LETTERS = 'abcdefghijklmnopqrstuvwxyz'.split('');
+
+  function buildAlphaTabs() {
+    LETTERS.forEach(l => {
+      const tab = document.createElement('div');
+      tab.className = 'alpha-tab';
+      tab.id = `tab-${l}`;
+      tab.textContent = l.toUpperCase();
+      alphaTabs.appendChild(tab);
+    });
+  }
+
+  function updateAlphaTabs() {
+    const currentLetter = WORDS[state.idx]?.[0] || 'a';
+    LETTERS.forEach(l => {
+      const tab = document.getElementById(`tab-${l}`);
+      if (!tab) return;
+      tab.className = 'alpha-tab';
+      if (l < currentLetter) tab.classList.add('done');
+      else if (l === currentLetter) {
+        tab.classList.add('current');
+        tab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+    });
+  }
+
+  // ── UI update ───────────────────────────────────────────────────────
+  function updateStats() {
+    const total = WORDS.length;
+    const pct = (state.idx / total * 100);
+    progressFill.style.width = pct + '%';
+    pctLabel.textContent = pct.toFixed(3) + '%';
+    statDone.textContent = state.done.toLocaleString('fr');
+    statSkipped.textContent = state.skipped.toLocaleString('fr');
+    statRemaining.textContent = (total - state.idx).toLocaleString('fr');
+  }
+
+  function renderCurrentWord(typed = '') {
+    const word = WORDS[state.idx] || '';
+    wordNumberEl.textContent = `Mot #${(state.idx + 1).toLocaleString('fr')} / ${WORDS.length.toLocaleString('fr')}`;
+
+    let html = '';
+    for (let i = 0; i < word.length; i++) {
+      let cls = 'word-char pending';
+      if (i < typed.length) {
+        cls = typed[i] === word[i] ? 'word-char correct' : 'word-char wrong';
+      }
+      html += `<span class="${cls}">${word[i]}</span>`;
+    }
+    currentWordEl.innerHTML = html;
+  }
+
+  function renderNextPeek() {
+    const next = WORDS[state.idx + 1];
+    if (next) {
+      nextPeek.textContent = `Suivant : ${next}`;
+      nextPeek.classList.add('visible');
+    } else {
+      nextPeek.textContent = '';
+      nextPeek.classList.remove('visible');
+    }
+  }
+
+  function refresh() {
+    renderCurrentWord();
+    renderNextPeek();
+    updateStats();
+    updateAlphaTabs();
+    wordInput.value = '';
+    wordInput.className = '';
+    hintText.textContent = '';
+    hintText.className = 'hint-text';
+  }
+
+  // ── Toast ───────────────────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+  }
+
+  // ── Milestone ───────────────────────────────────────────────────────
+  let mlTimer;
+  function showMilestone(msg) {
+    milestone.textContent = msg;
+    milestone.classList.add('show');
+    clearTimeout(mlTimer);
+    mlTimer = setTimeout(() => milestone.classList.remove('show'), 2200);
+  }
+
+  function checkMilestone() {
+    const pct = state.idx / WORDS.length * 100;
+    const milestones = [0.1, 0.5, 1, 5, 10, 25, 50, 75, 90, 100];
+    milestones.forEach(m => {
+      if (pct >= m && (state.idx - 1) / WORDS.length * 100 < m) {
+        showMilestone(`${m}% atteint ! 🎯`);
+      }
+    });
+    // Every 1000 words
+    if (state.idx > 0 && state.idx % 1000 === 0) {
+      showMilestone(`${state.idx.toLocaleString('fr')} mots ! 🔥`);
+    }
+  }
+
+  // ── Validation ──────────────────────────────────────────────────────
+  function validate() {
+    const word = WORDS[state.idx];
+    const typed = wordInput.value.trim().toLowerCase();
+
+    if (typed === word) {
+      // Correct
+      wordInput.className = 'correct-flash';
+      hintText.textContent = '✓ Correct !';
+      hintText.className = 'hint-text success';
+
+      state.idx++;
+      state.done++;
+      saveState();
+      checkMilestone();
+
+      setTimeout(() => refresh(), 200);
+    } else {
+      // Wrong
+      wordInput.className = 'shake';
+      hintText.textContent = `✗  "${typed}" ≠ "${word}"`;
+      hintText.className = 'hint-text error';
+
+      wordInput.addEventListener('animationend', () => {
+        wordInput.className = '';
+      }, { once: true });
+
+      // Show diff in word display
+      renderCurrentWord(typed);
+    }
+  }
+
+  // ── Input events ─────────────────────────────────────────────────────
+  wordInput.addEventListener('input', () => {
+    renderCurrentWord(wordInput.value.toLowerCase());
+  });
+
+  wordInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') validate();
+    else if (e.key === 'Escape') {
+      wordInput.value = '';
+      renderCurrentWord();
+      hintText.textContent = '';
+    }
+  });
+
+  btnSkip.addEventListener('click', () => {
+    showToast(`"${WORDS[state.idx]}" passé`);
+    state.idx++;
+    state.skipped++;
+    saveState();
+    refresh();
+  });
+
+  btnReset.addEventListener('click', () => {
+    if (!confirm('Remettre à zéro toute la progression ? Cette action est irréversible.')) return;
+    state = { idx: 0, done: 0, skipped: 0 };
+    saveState();
+    refresh();
+    showToast('Progression effacée');
+  });
+
+  // ── Init ─────────────────────────────────────────────────────────────
+  function init() {
+    loadText.textContent = 'Dictionnaire chargé — ' + WORDS.length.toLocaleString('fr') + ' mots';
+
+    setTimeout(() => {
+      loadScreen.style.opacity = '0';
+      loadScreen.style.transition = 'opacity 0.4s';
+      setTimeout(() => loadScreen.style.display = 'none', 400);
+    }, 700);
+
+    buildAlphaTabs();
+    loadState();
+    refresh();
+    wordInput.focus();
+  }
+
+  // words.js est chargé avant ce script, WORDS est disponible
+  if (typeof WORDS !== 'undefined' && WORDS.length > 0) {
+    init();
+  } else {
+    loadText.textContent = '❌ Impossible de charger words.js — vérifie que les deux fichiers sont bien uploadés.';
+  }
+
+})();
+</script>
+</body>
+</html>
